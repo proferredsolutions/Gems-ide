@@ -1,0 +1,5 @@
+{
+  "name": "Gemini IDE",
+  "description": "An AI-integrated development environment powered by the Gemini API. Generate, explain, refactor, and test code with the help of a powerful AI assistant, all within a familiar IDE layout.",
+  "requestFramePermissions": []
+}
