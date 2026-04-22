@@ -104,6 +104,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettin
           </div>
 
           <div className="space-y-2">
+            <label className="text-xs text-slate-400 block">App Zoom (Scaling)</label>
+            <div className="flex items-center space-x-3">
+              <input 
+                type="range" 
+                min="50" 
+                max="200" 
+                step="5"
+                value={settings.zoom} 
+                onChange={(e) => updateSetting('zoom', parseInt(e.target.value))}
+                className="flex-grow accent-sky-500"
+              />
+              <span className="text-xs font-mono text-slate-200 w-10">{settings.zoom}%</span>
+            </div>
+            <p className="text-[10px] text-slate-500">Scale the entire IDE UI for better visibility.</p>
+          </div>
+
+          <div className="space-y-2">
             <label className="text-xs text-slate-400 block">Theme</label>
             <div className="grid grid-cols-3 gap-2">
               {(['dark', 'light', 'amoled'] as const).map((t) => (

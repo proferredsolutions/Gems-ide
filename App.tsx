@@ -60,7 +60,8 @@ export default App;
     theme: 'dark',
     fontFamily: '"JetBrains Mono", "Fira Code", monospace',
     enableShortcuts: true,
-    keyMap: 'vscode'
+    keyMap: 'vscode',
+    zoom: 100
   });
   const [gitState, setGitState] = useState<GitState>({
     isInitialized: false,
@@ -612,12 +613,19 @@ export default App;
   ]);
 
   return (
-    <div className={`h-screen w-screen flex flex-col font-sans transition-colors duration-500 ${
+    <div className={`h-screen w-screen overflow-auto transition-colors duration-500 scrollbar-thin scrollbar-thumb-sky-500/20 scrollbar-track-transparent ${
       settings.theme === 'light' ? 'bg-slate-50 text-slate-900' : 
       settings.theme === 'amoled' ? 'bg-black text-slate-100' : 
       'bg-slate-900 text-slate-100'
     }`}>
-      <CommandPalette 
+      <div 
+        className="flex flex-col min-w-[1024px] h-full lg:min-w-full"
+        style={{ 
+          zoom: `${settings.zoom}%`,
+          height: '100%' 
+        }}
+      >
+        <CommandPalette 
         isOpen={isCommandPaletteOpen} 
         onClose={() => setIsCommandPaletteOpen(false)}
         files={files}
@@ -659,6 +667,21 @@ export default App;
                <span>AI Assist</span>
              </div>
           </div>
+          <button 
+            onClick={() => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+              } else {
+                document.exitFullscreen();
+              }
+            }}
+            className="p-1 px-2 hover:bg-slate-800 rounded text-slate-500 hover:text-white transition-all flex items-center"
+            title="Toggle Presentation Mode"
+          >
+            <Icon name="maximise" className="w-3.5 h-3.5 mr-1.5" />
+            <span className="text-[10px] hidden sm:inline uppercase font-bold tracking-widest">Presentation</span>
+          </button>
+
           <div className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border transition-colors duration-300 ${
             settings.theme === 'light' ? 'bg-slate-100 border-slate-200' : 'bg-slate-800 border-slate-700'
           }`}>
@@ -839,6 +862,7 @@ export default App;
         )}
       </main>
     </div>
+  </div>
   );
 };
 

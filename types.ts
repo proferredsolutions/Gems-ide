@@ -78,6 +78,7 @@ export interface IdeSettings {
   fontFamily: string;
   enableShortcuts: boolean;
   keyMap: 'vscode' | 'classic';
+  zoom: number;
 }
 
 export interface DebugState {
