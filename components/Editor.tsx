@@ -36,6 +36,7 @@ interface EditorProps {
   debugState: DebugState;
   onToggleBreakpoint: (fileId: string, line: number) => void;
   settings: IdeSettings;
+  onProblemsChange?: (problems: { line: number; message: string }[]) => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -52,11 +53,13 @@ export const Editor: React.FC<EditorProps> = ({
   debugState,
   onToggleBreakpoint,
   settings,
+  onProblemsChange,
 }) => {
   const activeFile = openFiles.find(f => f.id === activeFileId);
   const [isAiCompleting, setIsAiCompleting] = useState(false);
   const [lintErrors, setLintErrors] = useState<{line: number, message: string}[]>([]);
   const editorRef = useRef<any>(null);
+  const lastProblemsRef = useRef<string>('[]');
 
   const content = fileContents[activeFileId] || '';
   const lines = content.split('\n');
@@ -207,7 +210,13 @@ export const Editor: React.FC<EditorProps> = ({
               if (Array.isArray(errors)) {
                 // Ensure every item is valid
                 const validErrors = errors.filter(e => typeof e.line === 'number' && typeof e.message === 'string');
-                setLintErrors(validErrors);
+                
+                const errorsStr = JSON.stringify(validErrors);
+                if (errorsStr !== lastProblemsRef.current) {
+                  lastProblemsRef.current = errorsStr;
+                  setLintErrors(validErrors);
+                  onProblemsChange?.(validErrors);
+                }
               }
             } catch (parseErr) {
               console.warn('AI Lint JSON parse failed:', parseErr, jsonStr);

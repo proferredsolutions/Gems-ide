@@ -1,11 +1,11 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { FileExplorer } from './components/FileExplorer';
 import { Editor } from './components/Editor';
 import { Terminal } from './components/Terminal';
 import { AiPanel } from './components/AiPanel';
 import { CommandPalette } from './components/CommandPalette';
-import { FileNode, AiTask, AiTaskType, GitState, GitCommit, DebugState, Breakpoint, IdeSettings } from './types';
+import { FileNode, AiTask, AiTaskType, GitState, GitCommit, DebugState, Breakpoint, IdeSettings, TerminalTab } from './types';
 import { INITIAL_FILES } from './constants';
 import { runAiTask } from './services/geminiService';
 import { GitPanel } from './components/GitPanel';
@@ -45,7 +45,12 @@ export default App;
 }`,
     '6': `console.log("Utility script running.");`
   });
-  const [terminalOutput, setTerminalOutput] = useState<string[]>(['Welcome to Gemini IDE Terminal! AI outputs will appear here.']);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>(['Welcome to Gemini IDE. Type "help" for a list of commands.']);
+  const [programOutput, setProgramOutput] = useState<string[]>([]);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [problems, setProblems] = useState<{line: number; message: string; file: string}[]>([]);
+
+  const [activeTerminalTab, setActiveTerminalTab] = useState<TerminalTab>('terminal');
   const [isLoading, setIsLoading] = useState(false);
   const [activeAiTask, setActiveAiTask] = useState<AiTaskType>(AiTask.GenerateCode);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -70,6 +75,13 @@ export default App;
     stagedFiles: [],
   });
   const [isDebugOpen, setIsDebugOpen] = useState(false);
+  const [debugState, setDebugState] = useState<DebugState>({
+    status: 'inactive',
+    currentLine: null,
+    callStack: [],
+    variables: {},
+    breakpoints: []
+  });
 
   const findFile = useCallback((nodes: FileNode[], id: string): FileNode | null => {
     for (const node of nodes) {
@@ -82,22 +94,37 @@ export default App;
     return null;
   }, []);
 
-  const activeFile = findFile(files, activeFileId);
+  const activeFile = useMemo(() => findFile(files, activeFileId), [files, activeFileId, findFile]);
+  const openFiles = React.useMemo(() => openFileIds.map(id => findFile(files, id)).filter(Boolean) as FileNode[], [openFileIds, files, findFile]);
 
-  const handleFileSelect = (fileId: string) => {
-    if (!openFileIds.includes(fileId)) {
-      setOpenFileIds([...openFileIds, fileId]);
-    }
+  const handleProblemsChange = useCallback((newProblems: {line: number; message: string}[]) => {
+    const fileName = findFile(files, activeFileId)?.name || 'unknown';
+    setProblems(prev => {
+      const currentEnriched = newProblems.map(p => ({ ...p, file: fileName }));
+      if (JSON.stringify(prev) === JSON.stringify(currentEnriched)) return prev;
+      return currentEnriched;
+    });
+  }, [files, activeFileId, findFile]);
+
+  const handleFileSelect = useCallback((fileId: string) => {
+    setOpenFileIds(prev => {
+      if (!prev.includes(fileId)) {
+        return [...prev, fileId];
+      }
+      return prev;
+    });
     setActiveFileId(fileId);
-  };
+  }, []);
 
-  const handleCloseFile = (fileId: string) => {
-    const newOpenFileIds = openFileIds.filter(id => id !== fileId);
-    setOpenFileIds(newOpenFileIds);
-    if (activeFileId === fileId) {
-      setActiveFileId(newOpenFileIds.length > 0 ? newOpenFileIds[newOpenFileIds.length-1] : '');
-    }
-  };
+  const handleCloseFile = useCallback((fileId: string) => {
+    setOpenFileIds(prev => {
+      const newOpenFileIds = prev.filter(id => id !== fileId);
+      if (activeFileId === fileId) {
+        setActiveFileId(newOpenFileIds.length > 0 ? newOpenFileIds[newOpenFileIds.length - 1] : '');
+      }
+      return newOpenFileIds;
+    });
+  }, [activeFileId]);
 
   const updateFileDirtyStatus = useCallback((fileId: string, isDirty: boolean) => {
     const updateNodes = (nodes: FileNode[]): FileNode[] => {
@@ -235,12 +262,18 @@ export default App;
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const handleRunCode = (fileId: string) => {
+  const handleRunCode = useCallback((fileId: string) => {
     const file = findFile(files, fileId);
     if (file) {
-      if (file.name.endsWith('.html') || file.name.endsWith('.py')) {
+      if (file.name.endsWith('.html') || file.name.endsWith('.css')) {
         setActiveSidePanel('live');
-        addToTerminal(`Opening Live Preview for ${file.name}...`);
+        addToTerminal(`Opening Web Preview for ${file.name}...`);
+      } else if (file.name.endsWith('.py')) {
+        setActiveTerminalTab('output');
+        setProgramOutput(prev => [...prev, `[Running ${file.name}...]`, `Python simulation: Executing ${file.name}...`]);
+        setTimeout(() => {
+          setProgramOutput(prev => [...prev, '>>> Hello from Python simulation!', '>>> Process finished with exit code 0']);
+        }, 800);
       } else {
         addToTerminal(`Running ${file.name}...`);
         setTimeout(() => {
@@ -248,12 +281,13 @@ export default App;
         }, 800);
       }
     }
-  };
+  }, [files, findFile]);
 
-  const handleDebugCode = (fileId: string) => {
+  const handleDebugCode = useCallback((fileId: string) => {
     const file = findFile(files, fileId);
     if (file) {
       setActiveSidePanel('debug');
+      setActiveTerminalTab('debug');
       setIsDebugOpen(true);
       setDebugState(prev => ({
         ...prev,
@@ -262,11 +296,11 @@ export default App;
         callStack: [],
         variables: {}
       }));
-      addToTerminal(`Starting debugger for ${file.name}...`);
+      setDebugLogs(prev => [...prev, `Attaching to process ${Math.floor(Math.random() * 10000)}`, `Debugging ${file.name}...`]);
     }
-  };
+  }, [files, findFile]);
 
-  const handleToggleBreakpoint = (fileId: string, line: number) => {
+  const handleToggleBreakpoint = useCallback((fileId: string, line: number) => {
     setDebugState(prev => {
       const exists = prev.breakpoints.find(bp => bp.fileId === fileId && bp.line === line);
       if (exists) {
@@ -281,9 +315,10 @@ export default App;
         };
       }
     });
-  };
+  }, []);
 
-  const handleDebugStep = async (type: 'stepOver' | 'stepInto' | 'continue') => {
+  const handleDebugStep = useCallback(async (type: 'stepOver' | 'stepInto' | 'continue') => {
+    setDebugLogs(prev => [...prev, `Debugger action: ${type}`]);
     if (debugState.status === 'inactive') return;
     
     setIsLoading(true);
@@ -313,12 +348,12 @@ export default App;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [debugState, fileContents, activeFileId]);
 
-  const handleStopDebug = () => {
+  const handleStopDebug = useCallback(() => {
     setDebugState(prev => ({ ...prev, status: 'inactive', currentLine: null }));
     addToTerminal('Debugging session stopped.');
-  };
+  }, []);
 
   const handleImportFiles = (fileList: FileList) => {
     Array.from(fileList).forEach(file => {
@@ -433,10 +468,10 @@ export default App;
     addToTerminal(`Deleted: ${file.name}`);
   }, [files, findFile, handleCloseFile]);
 
-  const handleContentChange = (fileId: string, content: string) => {
+  const handleContentChange = useCallback((fileId: string, content: string) => {
     setFileContents(prev => ({ ...prev, [fileId]: content }));
     updateFileDirtyStatus(fileId, true);
-  };
+  }, [updateFileDirtyStatus]);
 
   const handleAiTask = async (task: AiTaskType, prompt: string) => {
     if (!activeFileId && task !== AiTask.GenerateCode) {
@@ -493,16 +528,90 @@ export default App;
   };
   
   const addToTerminal = (message: string) => {
-    setTerminalOutput(prev => [...prev, `\n[${new Date().toLocaleTimeString()}] ${message}`]);
+    setTerminalOutput(prev => [...prev, message]);
   };
 
-  const [debugState, setDebugState] = useState<DebugState>({
-    status: 'inactive',
-    currentLine: null,
-    callStack: [],
-    variables: {},
-    breakpoints: []
-  });
+  const handleClearTerminal = (tab: TerminalTab) => {
+    if (tab === 'terminal') setTerminalOutput([]);
+    if (tab === 'output') setProgramOutput([]);
+    if (tab === 'debug') setDebugLogs([]);
+    if (tab === 'problems') setProblems([]);
+  };
+
+  const handleTerminalCommand = (cmd: string) => {
+    const parts = cmd.split(' ');
+    const command = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    setTerminalOutput(prev => [...prev, `${cmd}`]);
+
+    switch (command) {
+      case 'help':
+        addToTerminal('Available commands: ls, mkdir, touch, cd, clear, help, python, echo, git, date');
+        break;
+      case 'ls':
+        const fileList = files.map(f => f.name).join('  ');
+        addToTerminal(fileList || '(empty directory)');
+        break;
+      case 'clear':
+        setTerminalOutput([]);
+        break;
+      case 'date':
+        addToTerminal(new Date().toString());
+        break;
+      case 'echo':
+        addToTerminal(args.join(' '));
+        break;
+      case 'mkdir':
+        if (!args[0]) {
+          addToTerminal('Usage: mkdir <directory_name>');
+        } else {
+          const newFolder: FileNode = { id: Math.random().toString(36).substr(2, 9), name: args[0], type: 'folder', children: [] };
+          setFiles(prev => [...prev, newFolder]);
+          addToTerminal(`Created directory: ${args[0]}`);
+        }
+        break;
+      case 'touch':
+        if (!args[0]) {
+          addToTerminal('Usage: touch <filename>');
+        } else {
+          const newFileId = Math.random().toString(36).substr(2, 9);
+          const newFile: FileNode = { id: newFileId, name: args[0], type: 'file' };
+          setFiles(prev => [...prev, newFile]);
+          setFileContents(prev => ({ ...prev, [newFileId]: '' }));
+          addToTerminal(`Created file: ${args[0]}`);
+        }
+        break;
+      case 'python':
+        if (!args[0]) {
+          addToTerminal('Entering Python REPL... (Simulation)');
+          setActiveTerminalTab('output');
+          setProgramOutput(prev => [...prev, 'Python 3.11.0 (main, Oct 24 2022, 18:26:48) [GCC 11.2.0] on linux', 'Type "help", "copyright", "credits" or "license" for more information.']);
+        } else {
+          const targetFile = files.find(f => f.name === args[0]);
+          if (targetFile && targetFile.type === 'file') {
+            setActiveTerminalTab('output');
+            setProgramOutput(prev => [...prev, `[Running ${args[0]}...]`]);
+            handleRunCode(targetFile.id);
+          } else {
+            addToTerminal(`python: error: can't open file '${args[0]}': [Errno 2] No such file or directory`);
+          }
+        }
+        break;
+      case 'git':
+        if (args[0] === 'init') {
+          handleGitInitialize();
+        } else if (args[0] === 'commit') {
+          handleGitCommit(args.slice(1).join(' ') || 'Manual commit');
+        } else {
+          addToTerminal(`git: ${args[0]} is not a git command. See 'git --help'.`);
+        }
+        break;
+      default:
+        addToTerminal(`bash: ${command}: command not found`);
+    }
+  };
+
 
   // Keyboard shortcuts implementation
   useEffect(() => {
@@ -788,7 +897,7 @@ export default App;
         
         <div className="flex-grow flex flex-col">
           <Editor
-            openFiles={openFileIds.map(id => findFile(files, id)).filter(Boolean) as FileNode[]}
+            openFiles={openFiles}
             activeFileId={activeFileId}
             fileContents={fileContents}
             onContentChange={handleContentChange}
@@ -801,8 +910,19 @@ export default App;
             debugState={debugState}
             onToggleBreakpoint={handleToggleBreakpoint}
             settings={settings}
+            onProblemsChange={handleProblemsChange}
           />
-          <Terminal output={terminalOutput} />
+          <Terminal 
+            terminalOutput={terminalOutput} 
+            problems={problems}
+            programOutput={programOutput}
+            debugLogs={debugLogs}
+            onCommand={handleTerminalCommand}
+            onClear={handleClearTerminal}
+            files={files}
+            activeTab={activeTerminalTab}
+            setActiveTab={setActiveTerminalTab}
+          />
         </div>
         
         {activeSidePanel === 'ai' ? (

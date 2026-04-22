@@ -81,6 +81,8 @@ export interface IdeSettings {
   zoom: number;
 }
 
+export type TerminalTab = 'terminal' | 'problems' | 'output' | 'debug';
+
 export interface DebugState {
   status: DebuggerStatus;
   currentLine: number | null;
