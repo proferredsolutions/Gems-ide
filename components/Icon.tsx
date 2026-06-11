@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps {
-  name: 'folder' | 'file' | 'react' | 'css' | 'json' | 'js' | 'markdown' | 'close' | 'search' | 'command' | 'git' | 'branch' | 'commit' | 'cloud' | 'terminal' | 'ai' | 'save' | 'python' | 'html' | 'play' | 'bug' | 'upload' | 'download' | 'live' | 'format' | 'sparkles' | 'settings' | 'blueprint' | 'history' | 'maximise';
+  name: 'folder' | 'file' | 'react' | 'css' | 'json' | 'js' | 'markdown' | 'close' | 'search' | 'command' | 'git' | 'branch' | 'commit' | 'cloud' | 'terminal' | 'ai' | 'save' | 'python' | 'html' | 'play' | 'bug' | 'upload' | 'download' | 'live' | 'format' | 'sparkles' | 'settings' | 'blueprint' | 'history' | 'maximise' | 'typescript';
   className?: string;
 }
 
@@ -158,6 +158,11 @@ const icons: Record<IconProps['name'], React.ReactNode> = {
   format: (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+    </svg>
+  ),
+  typescript: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="text-sky-600">
+      <path d="M1.125 0C.502 0 0 .502 0 1.125v21.75C0 23.498.502 24 1.125 24h21.75c.623 0 1.125-.502 1.125-1.125V1.125C24 .502 23.498 0 22.875 0H1.125zm17.363 9.75c.612 0 1.154.037 1.627.111v2.148c-.449-.13-.97-.194-1.56-.194-.45 0-.763.075-.94.226-.178.151-.267.382-.267.692 0 .235.084.425.253.57.169.145.54.314 1.111.505 1.414.471 2.37.89 2.868 1.258.498.368.747.937.747 1.708 0 .568-.131 1.055-.392 1.461-.262.405-.632.722-1.11.952-.478.23-1.058.345-1.74.345-1.147 0-2.097-.245-2.85-.735l.72-1.846c.711.474 1.565.711 2.561.711.429 0 .749-.074.96-.221.21-.147.316-.387.316-.721 0-.304-.112-.546-.335-.726-.223-.18-.75-.403-1.582-.67-1.125-.355-1.937-.743-2.436-1.166-.499-.422-.749-1.025-.749-1.808 0-.539.123-1.012.369-1.42.245-.408.6-.725 1.065-.951.464-.226 1.033-.338 1.707-.338zm-12.085.188h7.525v2.1h-2.585v10.162H9.01V12.038H6.403v-2.1z"/>
     </svg>
   ),
   sparkles: (

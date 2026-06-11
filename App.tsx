@@ -401,14 +401,11 @@ export default App;
     };
 
     setFiles(prev => {
-      const newFiles = [...prev];
-      const srcFolder = newFiles.find(f => f.name === 'src' && f.type === 'folder');
-      if (srcFolder && srcFolder.children) {
-        srcFolder.children.push(newNode);
-      } else {
-        newFiles.push(newNode);
+      const srcFolder = prev.find(f => f.name === 'src' && f.type === 'folder');
+      if (srcFolder) {
+        return prev.map(f => f.id === srcFolder.id ? { ...f, children: [...(f.children || []), newNode] } : f);
       }
-      return newFiles;
+      return [...prev, newNode];
     });
 
     setFileContents(prev => ({ ...prev, [newId]: '' }));
@@ -550,8 +547,16 @@ export default App;
         addToTerminal('Available commands: ls, mkdir, touch, cd, clear, help, python, echo, git, date');
         break;
       case 'ls':
-        const fileList = files.map(f => f.name).join('  ');
-        addToTerminal(fileList || '(empty directory)');
+        {
+          if (args[0] === 'src') {
+            const srcFolder = files.find(f => f.name === 'src' && f.type === 'folder');
+            const srcFiles = srcFolder?.children?.map(f => f.name + (f.type === 'folder' ? '/' : '')) || [];
+            addToTerminal(srcFiles.join('  ') || '(empty directory)');
+          } else {
+            const rootFiles = files.map(f => f.name + (f.type === 'folder' ? '/' : ''));
+            addToTerminal(rootFiles.join('  ') || '(empty directory)');
+          }
+        }
         break;
       case 'clear':
         setTerminalOutput([]);
@@ -566,8 +571,15 @@ export default App;
         if (!args[0]) {
           addToTerminal('Usage: mkdir <directory_name>');
         } else {
-          const newFolder: FileNode = { id: Math.random().toString(36).substr(2, 9), name: args[0], type: 'folder', children: [] };
-          setFiles(prev => [...prev, newFolder]);
+          const newId = `folder-${Date.now()}`;
+          const newFolder: FileNode = { id: newId, name: args[0], type: 'folder', children: [] };
+          setFiles(prev => {
+            const srcFolder = prev.find(f => f.name === 'src' && f.type === 'folder');
+            if (srcFolder) {
+              return prev.map(f => f.id === srcFolder.id ? { ...f, children: [...(f.children || []), newFolder] } : f);
+            }
+            return [...prev, newFolder];
+          });
           addToTerminal(`Created directory: ${args[0]}`);
         }
         break;
@@ -575,10 +587,16 @@ export default App;
         if (!args[0]) {
           addToTerminal('Usage: touch <filename>');
         } else {
-          const newFileId = Math.random().toString(36).substr(2, 9);
-          const newFile: FileNode = { id: newFileId, name: args[0], type: 'file' };
-          setFiles(prev => [...prev, newFile]);
-          setFileContents(prev => ({ ...prev, [newFileId]: '' }));
+          const newId = `file-${Date.now()}`;
+          const newFile: FileNode = { id: newId, name: args[0], type: 'file' };
+          setFiles(prev => {
+            const srcFolder = prev.find(f => f.name === 'src' && f.type === 'folder');
+            if (srcFolder) {
+              return prev.map(f => f.id === srcFolder.id ? { ...f, children: [...(f.children || []), newFile] } : f);
+            }
+            return [...prev, newFile];
+          });
+          setFileContents(prev => ({ ...prev, [newId]: '' }));
           addToTerminal(`Created file: ${args[0]}`);
         }
         break;

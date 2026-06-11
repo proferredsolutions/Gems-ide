@@ -136,10 +136,12 @@ export const Editor: React.FC<EditorProps> = ({
   }, [activeFileId, handleSave, handleAiComplete, settings.enableShortcuts]);
 
   const getFileIconName = (fileName: string): any => {
-    if (/\.(jsx|tsx)$/.test(fileName)) return 'react';
+    if (/\.tsx$/.test(fileName)) return 'react';
+    if (/\.jsx$/.test(fileName)) return 'js';
     if (/\.css$/.test(fileName)) return 'css';
     if (/\.json$/.test(fileName)) return 'json';
-    if (/\.(js|ts)$/.test(fileName)) return 'js';
+    if (/\.js$/.test(fileName)) return 'js';
+    if (/\.ts$/.test(fileName)) return 'typescript';
     if (/\.md$/.test(fileName)) return 'markdown';
     if (/\.py$/.test(fileName)) return 'python';
     if (/\.html$/.test(fileName)) return 'html';
