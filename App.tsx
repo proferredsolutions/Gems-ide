@@ -371,14 +371,14 @@ export default App;
 
         // Add to src folder if it exists, otherwise root
         setFiles(prev => {
-          const newFiles = [...prev];
-          const srcFolder = newFiles.find(f => f.name === 'src' && f.type === 'folder');
-          if (srcFolder && srcFolder.children) {
-            srcFolder.children.push(newNode);
-          } else {
-            newFiles.push(newNode);
+          const srcFolder = prev.find(f => f.name === 'src' && f.type === 'folder');
+          if (srcFolder) {
+            return prev.map(f => f.id === srcFolder.id
+              ? { ...f, children: [...(f.children || []), newNode] }
+              : f
+            );
           }
-          return newFiles;
+          return [...prev, newNode];
         });
 
         setFileContents(prev => ({ ...prev, [newId]: content }));

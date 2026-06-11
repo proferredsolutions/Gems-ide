@@ -2,11 +2,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { AiTask, AiTaskType } from "../types";
 
-const API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
 
 if (!API_KEY) {
     // In development/browser, this might be undefined if not provided via Vite define
-    console.warn("GEMINI_API_KEY not set. AI features will not work.");
+    console.warn("GEMINI_API_KEY or API_KEY not set. AI features will not work.");
 }
 
 const genAI = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
