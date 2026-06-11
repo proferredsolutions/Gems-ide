@@ -9,7 +9,7 @@ if (!API_KEY) {
     console.warn("GEMINI_API_KEY not set. AI features will not work.");
 }
 
-const genAI = API_KEY ? new GoogleGenAI(API_KEY) : null;
+const genAI = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const getSystemInstruction = (task: AiTaskType): string => {
     switch (task) {
@@ -71,13 +71,15 @@ export const runAiTask = async (task: AiTaskType, prompt: string, code: string):
     const systemInstruction = getSystemInstruction(task);
     
     try {
-        const model = genAI.getGenerativeModel({
+        const result = await genAI.models.generateContent({
             model: "gemini-1.5-flash",
-            systemInstruction: systemInstruction,
+            contents: [{ role: "user", parts: [{ text: fullPrompt }] }],
+            config: {
+                systemInstruction: { role: "system", parts: [{ text: systemInstruction }] },
+            }
         });
         
-        const result = await model.generateContent(fullPrompt);
-        const responseText = result.response.text();
+        const responseText = result.text || "";
 
         if (task === AiTask.GenerateCode || task === AiTask.RefactorCode || task === AiTask.GenerateTests) {
             return cleanCodeResponse(responseText);
@@ -97,13 +99,15 @@ export const completeCode = async (codeBefore: string, codeAfter: string, fileNa
     const prompt = `File: ${fileName}\n\nCode before cursor:\n\`\`\`\n${codeBefore}\n\`\`\`\n\nCode after cursor:\n\`\`\`\n${codeAfter}\n\`\`\``;
 
     try {
-        const model = genAI.getGenerativeModel({
+        const result = await genAI.models.generateContent({
             model: "gemini-1.5-flash",
-            systemInstruction: systemInstruction,
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            config: {
+                systemInstruction: { role: "system", parts: [{ text: systemInstruction }] },
+            }
         });
         
-        const result = await model.generateContent(prompt);
-        return cleanCodeResponse(result.response.text());
+        return cleanCodeResponse(result.text || "");
     } catch (error) {
         console.error("Gemini AI completion failed:", error);
         return "";
