@@ -1,6 +1,7 @@
 # Gemini IDE
 
 An AI-powered, browser-based IDE with deep integration of Gemini 1.5 Pro.
+this was something i started an worked on slowly learning as i went. 
 
 ## Features
 - **AI Code Completion**: Real-time suggestions as you type.
